@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "preprocessor",
+    "preprocessor-derive",
+]
+resolver = "2"
