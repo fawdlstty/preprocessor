@@ -1,8 +1,10 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Expr, ItemFn};
+use syn::{Expr, File, ItemFn, parse_macro_input};
 
 mod evaluator;
+mod evcxr_engine;
+mod prelude;
 
 /// `preprocessor::op!(...)` — Expression-level macro for compile-time evaluation.
 ///
@@ -62,4 +64,28 @@ pub fn optimize(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     output.into()
+}
+
+/// `#[preprocessor::prelude]` — Crate-level attribute macro for automatic dependency resolution.
+///
+/// Scans the crate for `op!` macro usages, identifies unqualified paths (like `Local`),
+/// resolves them to their full crate paths (like `chrono::Local`) based on `use` statements,
+/// and rewrites the `op!` calls to use these full paths. This allows `op!` to work
+/// without requiring fully qualified paths inside the macro invocation.
+///
+/// # Example
+/// ```ignore
+/// #![preprocessor::prelude]
+///
+/// fn main() {
+///     // Works even without `use chrono::Local;` if `Local` is imported elsewhere
+///     let time = preprocessor::op!(Local::now().to_string());
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn prelude(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let file = parse_macro_input!(item as File);
+    let output = prelude::process_file(file);
+
+    quote!(#output).into()
 }

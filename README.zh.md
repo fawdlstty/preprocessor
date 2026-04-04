@@ -3,20 +3,20 @@
 ![version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffawdlstty%2Fpreprocessor%2Fmain%2F/preprocessor/Cargo.toml&query=package.version&label=version)
 ![status](https://img.shields.io/github/actions/workflow/status/fawdlstty/preprocessor/rust.yml)
 
-English | [简体中文](README.zh.md)
+[English](README.md) | 简体中文
 
-Compile-time computation macro library — analyzes computable sub-expressions in code and evaluates parts that can be executed at compile time.
+编译期计算宏库 — 分析代码中的可计算子表达式，将可在编译期执行的部分直接求值。
 
-## Installation
+## 安装
 
 ```shell
 cargo add preprocessor
-cargo add chrono # Required for the test code below
+cargo add chrono # 下面的测试代码需要用到
 ```
 
-## Usage
+## 用法
 
-### `#[optimize]` — Function-level attribute macro
+### `#[optimize]` — 函数级属性宏
 
 ```rust
 #[preprocessor::optimize]
@@ -33,7 +33,7 @@ fn main() {
 }
 ```
 
-### `op!` — Expression-level macro
+### `op!` — 表达式级宏
 
 ```rust
 fn main() {

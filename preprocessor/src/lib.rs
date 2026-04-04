@@ -42,7 +42,7 @@
 //! ```
 
 #[cfg(not(feature = "disabled"))]
-pub use preprocessor_derive::{op, optimize};
+pub use preprocessor_derive::{op, optimize, prelude};
 
 /// When `disabled` feature is enabled, `op!` becomes transparent passthrough.
 #[cfg(feature = "disabled")]

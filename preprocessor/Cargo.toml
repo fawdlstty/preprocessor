@@ -2,10 +2,20 @@
 name = "preprocessor"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/fawdlstty/preprocessor"
+homepage = "https://github.com/fawdlstty/preprocessor"
+description = "Compile-time computation macro library — analyzes computable sub-expressions in code and evaluates parts that can be executed at compile time"
+authors = ["fawdlstty<f@fawdlstty.com>"]
+keywords = ["Compile-time", "preprocessor"]
+categories = []
+readme = "../README.md"
 
 [features]
 default = []
 disabled = []
 
 [dependencies]
-preprocessor-derive = { path = "../preprocessor-derive" }
+chrono = "0.4.44"
+preprocessor-derive = { version = "0.1.0", path = "../preprocessor-derive" }
