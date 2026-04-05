@@ -11,12 +11,15 @@ Compile-time computation macro library — analyzes computable sub-expressions i
 
 ```shell
 cargo add preprocessor
-cargo add chrono # Required for the test code below
 ```
 
 ## Usage
 
 ### `#[optimize]` — Function-level attribute macro
+
+```shell
+cargo add chrono
+```
 
 ```rust
 #[preprocessor::optimize]
@@ -35,6 +38,10 @@ fn main() {
 
 ### `op!` — Expression-level macro
 
+```shell
+cargo add chrono
+```
+
 ```rust
 fn main() {
     let time = preprocessor::op!(
@@ -46,3 +53,28 @@ fn main() {
     println!("build_time: {time}");
 }
 ```
+
+### Async Support
+
+The `op!` macro fully supports async/await and the `?` operator, enabling compile-time evaluation of asynchronous code:
+
+```shell
+cargo add tokio reqwest
+```
+
+```rust
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let text = preprocessor::op!({
+        let response = reqwest::get("https://www.fawdlstty.com").await?;
+        response.text().await?
+    });
+    println!("{}", text);
+    Ok(())
+}
+```
+
+**Key Features:**
+- ✅ Full async/await support
+- ✅ `?` error propagation operator
+- ✅ Compile-time evaluation of async operations

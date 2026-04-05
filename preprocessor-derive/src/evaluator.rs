@@ -78,7 +78,7 @@ impl Value {
             }
             Value::Str(s) => {
                 let lit = LitStr::new(s, span);
-                quote_spanned!(span => #lit.to_string())
+                quote_spanned!(span => ::std::string::String::from(#lit))
             }
             Value::Byte(b) => {
                 let lit = LitByte::new(*b, span);

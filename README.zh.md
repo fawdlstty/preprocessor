@@ -11,12 +11,15 @@
 
 ```shell
 cargo add preprocessor
-cargo add chrono # 下面的测试代码需要用到
 ```
 
 ## 用法
 
 ### `#[optimize]` — 函数级属性宏
+
+```shell
+cargo add chrono
+```
 
 ```rust
 #[preprocessor::optimize]
@@ -35,6 +38,10 @@ fn main() {
 
 ### `op!` — 表达式级宏
 
+```shell
+cargo add chrono
+```
+
 ```rust
 fn main() {
     let time = preprocessor::op!(
@@ -46,3 +53,28 @@ fn main() {
     println!("build_time: {time}");
 }
 ```
+
+### 异步支持
+
+`op!` 宏完整支持 async/await 和 `?` 运算符，可以对异步代码进行编译期求值：
+
+```shell
+cargo add tokio reqwest
+```
+
+```rust
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let text = preprocessor::op!({
+        let response = reqwest::get("https://www.fawdlstty.com").await?;
+        response.text().await?
+    });
+    println!("{}", text);
+    Ok(())
+}
+```
+
+**核心特性：**
+- ✅ 完整支持 async/await
+- ✅ `?` 错误传播运算符
+- ✅ 异步操作的编译期求值

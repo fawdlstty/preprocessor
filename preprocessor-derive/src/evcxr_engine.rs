@@ -418,11 +418,22 @@ edition = "2021"
         toml.push_str(&format!("{} = \"*\"\n", crate_name));
     }
 
-    // 兜底逻辑：如果代码中明显使用了 chrono 但未被检测到，则强制添加
+    // 坡底逻辑：如果代码中明显使用了 chrono 但未被检测到，则强制添加
     if (code.contains("Local") || code.contains("chrono::"))
         && !external_crates.iter().any(|c| c == "chrono")
     {
         toml.push_str("chrono = \"*\"\n");
+    }
+
+    // 检测异步代码并自动添加 tokio 依赖
+    let is_async = code.contains(".await") || code.contains("async ");
+    if is_async && !external_crates.iter().any(|c| c == "tokio") {
+        toml.push_str("tokio = { version = \"*\", features = [\"full\"] }\n");
+    }
+
+    // 检测是否使用了 reqwest，确保添加完整特性
+    if code.contains("reqwest::") && !external_crates.iter().any(|c| c == "reqwest") {
+        toml.push_str("reqwest = { version = \"*\", features = [\"blocking\"] }\n");
     }
 
     let cargo_toml_path = dir.join("Cargo.toml");
@@ -456,8 +467,51 @@ fn write_main_rs(dir: &PathBuf, code: &str) -> Result<(), String> {
         use_statements.insert_str(0, "use chrono::{Local, Utc, TimeZone, NaiveDateTime};\n");
     }
 
-    let content = format!(
-        r#"{}
+    // 检测是否是异步代码
+    let is_async = body_code.contains(".await") || body_code.contains("async ");
+    
+    // 检测是否使用了 ? 运算符
+    let uses_try = body_code.contains('?');
+    
+    let content = if is_async {
+        // 异步代码处理
+        if uses_try {
+            // 使用 ? 运算符时，需要返回 Result 类型
+            format!(
+                r#"{}
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {{
+    let result = (async {{
+        let _result = {{
+            {}
+        }};
+        Ok::<_, Box<dyn std::error::Error>>(_result)
+    }}).await?;
+    println!("{{:?}}", result);
+    Ok(())
+}}
+"#,
+                use_statements, body_code
+            )
+        } else {
+            // 不使用 ? 运算符的异步代码
+            format!(
+                r#"{}
+#[tokio::main]
+async fn main() {{
+    let result = async {{
+        {}
+    }}.await;
+    println!("{{:?}}", result);
+}}
+"#,
+                use_statements, body_code
+            )
+        }
+    } else {
+        // 同步代码处理
+        format!(
+            r#"{}
 fn main() {{
     let result = {{
         {}
@@ -465,8 +519,10 @@ fn main() {{
     println!("{{:?}}", result);
 }}
 "#,
-        use_statements, body_code
-    );
+            use_statements, body_code
+        )
+    };
+    
     std::fs::write(&main_rs_path, content)
         .map_err(|e| format!("failed to write main.rs: {}", e))?;
     Ok(())

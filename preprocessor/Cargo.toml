@@ -1,6 +1,6 @@
 [package]
 name = "preprocessor"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -17,5 +17,7 @@ default = []
 disabled = []
 
 [dependencies]
-chrono = "0.4.44"
-preprocessor-derive = { version = "0.1.0", path = "../preprocessor-derive" }
+preprocessor-derive = { version = "0.1.1", path = "../preprocessor-derive" }
+
+# cargo publish -p preprocessor-derive --allow-dirty --registry crates-io
+# cargo publish -p preprocessor --allow-dirty --registry crates-io

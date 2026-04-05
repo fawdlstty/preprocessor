@@ -1,6 +1,3 @@
 [workspace]
 resolver = "2"
 members = ["preprocessor", "preprocessor-derive"]
-
-# cargo publish -p preprocessor-derive --allow-dirty --registry crates-io
-# cargo publish -p preprocessor --allow-dirty --registry crates-io
