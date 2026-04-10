@@ -8,14 +8,17 @@ mod prelude;
 
 /// `preprocessor::op!(...)` — Expression-level macro for compile-time evaluation.
 ///
-/// Parses the input expression, evaluates all evaluable sub-expressions at compile time,
-/// and replaces them with literal results. Non-evaluable parts (free variables, etc.)
-/// are passed through unchanged.
+/// Parses the input expression, evaluates it at compile time,
+/// and replaces it with the literal result.
+///
+/// **Important**: If the expression cannot be fully evaluated at compile time
+/// (e.g., contains free variables, unknown functions, etc.), the macro will
+/// generate a compile-time error instead of passing through unchanged.
 ///
 /// # Example
 /// ```ignore
 /// let result = preprocessor::op!(1 + 2 * 3);  // → let result = 7;
-/// let x = preprocessor::op!(a + 1);           // → let x = a + 1; (passthrough)
+/// let x = preprocessor::op!(a + 1);           // → COMPILE ERROR: cannot evaluate at compile time
 /// ```
 #[proc_macro]
 pub fn op(input: TokenStream) -> TokenStream {

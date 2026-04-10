@@ -22,21 +22,85 @@ const STD_CRATES: &[&str] = &["std", "core", "alloc", "proc_macro"];
 
 /// Common module/type names that should not be treated as crate names.
 const COMMON_NAMES: &[&str] = &[
+    // chrono types
     "Local",
     "Utc",
     "DateTime",
     "NaiveDateTime",
     "Duration",
     "TimeZone",
+    // Result/Option variants
     "Some",
     "None",
     "Ok",
     "Err",
+    // Common types
     "Vec",
     "String",
     "Box",
     "Option",
     "Result",
+    // Collection types
+    "HashMap",
+    "HashSet",
+    "BTreeMap",
+    "BTreeSet",
+    "LinkedList",
+    "VecDeque",
+    "BinaryHeap",
+    // Hash types
+    "DefaultHasher",
+    "RandomState",
+    // Path types
+    "PathBuf",
+    "Path",
+    // Network types
+    "Ipv4Addr",
+    "Ipv6Addr",
+    "SocketAddr",
+    // Process types
+    "Command",
+    "Child",
+    "Output",
+    // Filesystem types
+    "File",
+    "OpenOptions",
+    "Metadata",
+    "DirBuilder",
+    "ReadDir",
+    "DirEntry",
+    "FileType",
+    "Permissions",
+    // Time/Thread types
+    "SystemTime",
+    "Instant",
+    "Thread",
+    "JoinHandle",
+    "Builder",
+    "LocalKey",
+    // std module names
+    "mem",
+    "size_of",
+    "size_of_val",
+    "align_of",
+    "env",
+    "net",
+    "hash",
+    "collections",
+    "process",
+    "path",
+    "time",
+    "fs",
+    "io",
+    "str",
+    "slice",
+    "array",
+    "cmp",
+    "fmt",
+    "default",
+    "clone",
+    "iter",
+    "ops",
 ];
 
 /// Extracts external crate names from code by scanning:
@@ -61,6 +125,17 @@ fn detect_external_crates(code: &str) -> Vec<String> {
     for cap in path_re.captures_iter(code) {
         if let Some(m) = cap.get(1) {
             let name = m.as_str();
+            // 检查匹配前是否有 std::, core::, alloc:: 等前缀
+            let start = m.start();
+            if start > 0 {
+                let before = &code[..start];
+                if before.ends_with("std::")
+                    || before.ends_with("core::")
+                    || before.ends_with("alloc::")
+                {
+                    continue;
+                }
+            }
             if !STD_CRATES.contains(&name)
                 && !COMMON_NAMES.contains(&name)
                 && !crates.contains(&name.to_string())
@@ -71,6 +146,164 @@ fn detect_external_crates(code: &str) -> Vec<String> {
     }
 
     crates
+}
+
+/// 根据代码中使用的类型/模块，自动生成 std use 语句。
+/// 这确保动态引擎生成的 main.rs 中包含必要的 std 导入。
+fn generate_std_imports(code: &str) -> String {
+    let mut imports = Vec::new();
+
+    // 集合类型
+    if code.contains("HashMap::") || code.contains("HashMap<") {
+        imports.push("use std::collections::HashMap;".to_string());
+    }
+    if code.contains("HashSet::") || code.contains("HashSet<") {
+        imports.push("use std::collections::HashSet;".to_string());
+    }
+    if code.contains("BTreeMap::") || code.contains("BTreeMap<") {
+        imports.push("use std::collections::BTreeMap;".to_string());
+    }
+    if code.contains("BTreeSet::") || code.contains("BTreeSet<") {
+        imports.push("use std::collections::BTreeSet;".to_string());
+    }
+    if code.contains("VecDeque::") || code.contains("VecDeque<") {
+        imports.push("use std::collections::VecDeque;".to_string());
+    }
+    if code.contains("BinaryHeap::") || code.contains("BinaryHeap<") {
+        imports.push("use std::collections::BinaryHeap;".to_string());
+    }
+    if code.contains("LinkedList::") || code.contains("LinkedList<") {
+        imports.push("use std::collections::LinkedList;".to_string());
+    }
+
+    // Hash 相关
+    if code.contains("DefaultHasher::") || code.contains("hash::") {
+        imports.push("use std::hash::{Hash, Hasher, DefaultHasher};".to_string());
+    }
+    if code.contains("RandomState") {
+        imports.push("use std::collections::hash_map::RandomState;".to_string());
+    }
+
+    // 路径相关
+    if code.contains("PathBuf::") || code.contains("PathBuf") {
+        imports.push("use std::path::PathBuf;".to_string());
+    }
+    if code.contains("Path::") || (code.contains("Path") && !code.contains("PathBuf")) {
+        imports.push("use std::path::Path;".to_string());
+    }
+
+    // 网络相关
+    if code.contains("Ipv4Addr::") || code.contains("Ipv4Addr") {
+        imports.push("use std::net::Ipv4Addr;".to_string());
+    }
+    if code.contains("Ipv6Addr::") || code.contains("Ipv6Addr") {
+        imports.push("use std::net::Ipv6Addr;".to_string());
+    }
+    if code.contains("SocketAddr::") || code.contains("SocketAddr") {
+        imports.push("use std::net::SocketAddr;".to_string());
+    }
+
+    // 进程相关
+    if code.contains("Command::") && code.contains("new()") {
+        imports.push("use std::process::Command;".to_string());
+    }
+    if code.contains("Child") {
+        imports.push("use std::process::Child;".to_string());
+    }
+    if code.contains("Output") {
+        imports.push("use std::process::Output;".to_string());
+    }
+
+    // 文件系统相关
+    if code.contains("File::") || (code.contains("File") && code.contains("open")) {
+        imports.push("use std::fs::File;".to_string());
+    }
+    if code.contains("OpenOptions::") {
+        imports.push("use std::fs::OpenOptions;".to_string());
+    }
+    if code.contains("Metadata") && code.contains("metadata") {
+        imports.push("use std::fs::Metadata;".to_string());
+    }
+    if code.contains("DirBuilder::") {
+        imports.push("use std::fs::DirBuilder;".to_string());
+    }
+    if code.contains("read_dir") || code.contains("ReadDir") {
+        imports.push("use std::fs::{read_dir, ReadDir};".to_string());
+    }
+    if code.contains("DirEntry") {
+        imports.push("use std::fs::DirEntry;".to_string());
+    }
+    if code.contains("FileType") {
+        imports.push("use std::fs::FileType;".to_string());
+    }
+    if code.contains("Permissions") {
+        imports.push("use std::fs::Permissions;".to_string());
+    }
+
+    // 时间/线程相关
+    if code.contains("SystemTime::") || code.contains("SystemTime") {
+        imports.push("use std::time::SystemTime;".to_string());
+    }
+    if code.contains("Instant::") || code.contains("Instant") {
+        imports.push("use std::time::Instant;".to_string());
+    }
+    if code.contains("Duration::") || code.contains("Duration") {
+        imports.push("use std::time::Duration;".to_string());
+    }
+    if code.contains("thread::") || code.contains("Thread") {
+        imports.push("use std::thread;".to_string());
+    }
+    if code.contains("JoinHandle") {
+        imports.push("use std::thread::JoinHandle;".to_string());
+    }
+
+    // mem 相关
+    if code.contains("size_of::") || code.contains("size_of::<") {
+        imports.push("use std::mem::size_of;".to_string());
+    }
+    if code.contains("size_of_val::") {
+        imports.push("use std::mem::size_of_val;".to_string());
+    }
+    if code.contains("align_of::") {
+        imports.push("use std::mem::align_of;".to_string());
+    }
+
+    // env 相关
+    if code.contains("env::") {
+        imports.push("use std::env;".to_string());
+    }
+
+    // cmp 相关
+    if code.contains("cmp::") || code.contains("Ordering::") {
+        imports.push("use std::cmp::Ordering;".to_string());
+    }
+
+    // default 相关
+    if code.contains("Default::default()") && !code.contains("use std::default::Default;") {
+        imports.push("use std::default::Default;".to_string());
+    }
+
+    // clone 相关
+    if code.contains(".clone()") && !code.contains("use std::clone::Clone;") {
+        imports.push("use std::clone::Clone;".to_string());
+    }
+
+    // iter 相关
+    if code.contains(".iter()") || code.contains(".into_iter()") {
+        imports.push("use std::iter::Iterator;".to_string());
+    }
+
+    // ops 相关
+    if code.contains("ops::") || code.contains("Range::") {
+        imports.push("use std::ops;".to_string());
+    }
+
+    // io 相关
+    if code.contains("io::") || code.contains("Read") || code.contains("Write") {
+        imports.push("use std::io;".to_string());
+    }
+
+    imports.join("\n")
 }
 
 /// Extracts free variable names from an expression AST.
@@ -457,6 +690,13 @@ fn write_main_rs(dir: &PathBuf, code: &str) -> Result<(), String> {
             body_code.push_str(line);
             body_code.push('\n');
         }
+    }
+
+    // 自动生成 std 库 use 语句
+    let std_imports = generate_std_imports(&body_code);
+    if !std_imports.is_empty() {
+        use_statements.insert_str(0, &std_imports);
+        use_statements.push('\n');
     }
 
     // 检测是否使用了 chrono 相关的类型，如果有则自动注入依赖

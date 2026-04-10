@@ -25,9 +25,9 @@
 //! // Compile-time evaluation
 //! let result = op!(1 + 2 * 3); // → 7
 //!
-//! // With free variables — passed through
-//! let x = 5;
-//! let y = op!(x + 1); // → x + 1 (unchanged)
+//! // With free variables — compile error
+//! // let x = 5;
+//! // let y = op!(x + 1); // ERROR: cannot evaluate at compile time
 //! ```
 //!
 //! ```rust,ignore

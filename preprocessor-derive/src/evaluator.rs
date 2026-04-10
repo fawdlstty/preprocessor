@@ -16,8 +16,8 @@ use quote::quote_spanned;
 use syn::parse::Parser;
 use syn::spanned::Spanned;
 use syn::{
-    BinOp, Expr, ExprArray, ExprBinary, ExprBlock, ExprCast, ExprGroup, ExprLit, ExprParen,
-    ExprTuple, ExprUnary, Lit, LitBool, LitByte, LitChar, LitFloat, LitInt, LitStr, Stmt, Token,
+    BinOp, Expr, ExprBinary, ExprCast, ExprGroup, ExprLit, ExprParen,
+    ExprUnary, Lit, LitBool, LitByte, LitChar, LitFloat, LitInt, LitStr, Stmt, Token,
     UnOp,
 };
 
@@ -697,166 +697,12 @@ pub fn transform_expr(expr: &Expr) -> (Expr, bool) {
                 (expr.clone(), false)
             }
         }
-        EvalResult::PassThrough => transform_expr_recursive(expr),
+        EvalResult::PassThrough => {
+            // PassThrough 意味着表达式无法在编译期求值，但可能是合法的运行时代码
+            // 返回原始表达式，让 Rust 编译器在运行时处理
+            (expr.clone(), false)
+        }
     }
-}
-
-fn transform_expr_recursive(expr: &Expr) -> (Expr, bool) {
-    let mut changed = false;
-
-    let new_expr = match expr {
-        Expr::Paren(paren) => {
-            let (inner, inner_changed) = transform_expr(&paren.expr);
-            if inner_changed {
-                changed = true;
-                Expr::Paren(ExprParen {
-                    expr: Box::new(inner),
-                    ..paren.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Binary(binary) => {
-            let (l, l_changed) = transform_expr(&binary.left);
-            let (r, r_changed) = transform_expr(&binary.right);
-            if l_changed || r_changed {
-                changed = true;
-                Expr::Binary(ExprBinary {
-                    left: Box::new(l),
-                    right: Box::new(r),
-                    ..binary.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Unary(unary) => {
-            let (inner, inner_changed) = transform_expr(&unary.expr);
-            if inner_changed {
-                changed = true;
-                Expr::Unary(ExprUnary {
-                    expr: Box::new(inner),
-                    ..unary.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Tuple(tuple) => {
-            let mut new_elems = syn::punctuated::Punctuated::new();
-            for pair in tuple.elems.pairs() {
-                let (new_elem, elem_changed) = transform_expr(pair.value());
-                if elem_changed {
-                    changed = true;
-                }
-                new_elems.push_value(new_elem);
-                if let Some(punct) = pair.punct() {
-                    new_elems.push_punct((**punct).clone());
-                }
-            }
-            if changed {
-                Expr::Tuple(ExprTuple {
-                    elems: new_elems,
-                    ..tuple.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Array(array) => {
-            let mut new_elems = syn::punctuated::Punctuated::new();
-            for pair in array.elems.pairs() {
-                let (new_elem, elem_changed) = transform_expr(pair.value());
-                if elem_changed {
-                    changed = true;
-                }
-                new_elems.push_value(new_elem);
-                if let Some(punct) = pair.punct() {
-                    new_elems.push_punct((**punct).clone());
-                }
-            }
-            if changed {
-                Expr::Array(ExprArray {
-                    elems: new_elems,
-                    ..array.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Cast(cast) => {
-            let (inner, inner_changed) = transform_expr(&cast.expr);
-            if inner_changed {
-                changed = true;
-                Expr::Cast(ExprCast {
-                    expr: Box::new(inner),
-                    ..cast.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Call(call) => {
-            let mut new_args = syn::punctuated::Punctuated::new();
-            for pair in call.args.pairs() {
-                let (new_elem, elem_changed) = transform_expr(pair.value());
-                if elem_changed {
-                    changed = true;
-                }
-                new_args.push_value(new_elem);
-                if let Some(punct) = pair.punct() {
-                    new_args.push_punct((**punct).clone());
-                }
-            }
-            if changed {
-                Expr::Call(syn::ExprCall {
-                    args: new_args,
-                    ..call.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::MethodCall(method) => {
-            let (new_recv, recv_changed) = transform_expr(&method.receiver);
-            let mut new_args = syn::punctuated::Punctuated::new();
-            for pair in method.args.pairs() {
-                let (new_elem, elem_changed) = transform_expr(pair.value());
-                if elem_changed {
-                    changed = true;
-                }
-                new_args.push_value(new_elem);
-                if let Some(punct) = pair.punct() {
-                    new_args.push_punct((**punct).clone());
-                }
-            }
-            if recv_changed || changed {
-                Expr::MethodCall(syn::ExprMethodCall {
-                    receiver: Box::new(new_recv),
-                    args: new_args,
-                    ..method.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        Expr::Block(block) => {
-            let new_block = transform_block(&block.block);
-            if new_block != block.block {
-                changed = true;
-                Expr::Block(ExprBlock {
-                    block: new_block,
-                    ..block.clone()
-                })
-            } else {
-                return (expr.clone(), false);
-            }
-        }
-        _ => return (expr.clone(), false),
-    };
-
-    (new_expr, changed)
 }
 
 pub fn transform_block(block: &syn::Block) -> syn::Block {
